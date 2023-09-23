@@ -1,0 +1,170 @@
+File descriptor
+int fd = open( “filename.txt”, O_WRONLY | O_CREAT, 0664 );
+
+Returns int value file descriptor
+Returns -1 in case it fails
+
+close(fd);
+Read and Write system calls
+int bytes_read = read( fd_read, buffer, buffer_size );
+write( fd_write , buffer, bytes_read);
+Pipes
+// array to store the file descriptor for pipe
+int p[2];
+
+p[0] = read end;
+p[1] = write end;
+
+// create pipe directly inside condition
+if(pipe(p) == -1)
+{
+	perror(“pipe”);
+exit(-1);
+}
+
+// child process
+close(p[1]);	// close write end
+read( p[0], buffer, buffer_size );	// do task
+close(p[0]);	// close read end
+
+// Parent process
+close(p[0]);	// close read end
+write( p[1], buffer, buffer_size );	// do task
+close(p[1]);	// close write end
+FIFO
+So previously we accessed the parent and child process using pipes, and it used file descriptors to read and write data.
+FIFO is a named pipe, we can read and write data to FIFO pipe by name. Also it allows communication between two unrelated processes.
+
+mkfifo()
+mknfifo [OPTION]... Name...
+mknod -m 0664 myfifo1
+[ -m is mandatory, 0664 is the file permission ]
+
+mknod()
+mknod it makes a block or character special files
+mknod [OPTION]... Name... TYPE[MAJOR MINOR]
+mknod -m 0664 myfifo2 p
+
+TYPE: (both major and minor must be specified when using b,c and u)
+b	=	block(buffer)
+c,u	=	character(unbuffered)
+p	=	FIFO( omit type if using FIFO)
+
+
+Implementation:
+Command: mkfifo(library function), mknod(system call)
+
+mkfifo()
+//-----	SENDER FILE	-----
+// create a FIFO pipe using mkfifo()
+mkfifo(“filename”, 0664 );
+// if you want the FIFO file in a different directory, add the path with the file name as a string. (/home/sanyal/myfifo)
+
+// OPEN() that file using system call
+fd = open( “filename”, O_WRONLY );
+
+// send data
+write(fd, buffer, buffer_size );
+close(fd);
+
+
+//-----	RECEIVER FILE	-----
+// OPEN() the file as FIFO is already created
+fd = open( “filename”, O_RDONLY );
+
+// read data
+read(fd, buffer, buffer_size);
+close(fd);
+
+
+mknod()
+//-----	SENDER FILE	-----
+// create a FIFO pipe using mknod()
+mkfifo(“filename”, S_IFIFO | 0664 , 0);
+
+// OPEN() that file using system call
+fd = open( “filename”, O_WRONLY );
+
+// send data
+write(fd, buffer, buffer_size );
+close(fd);
+
+
+//-----	RECEIVER FILE	-----
+// OPEN() the file as FIFO is already created
+fd = open( “filename”, O_RDONLY );
+
+
+// read data
+read(fd, buffer, buffer_size);
+close(fd);
+
+
+
+Sender
+Receiver
+Create FIFO
+Open FIFO
+Send/receive data
+Send/receive data
+
+Shared memory
+
+// gives the list of all the present shared memory
+ipcs -m
+
+// to delete a shared memory
+ipcrm -m shmid	-> from the terminal
+shmctl()		-> from the program itself
+
+
+//-----	SENDER FILE	-----
+// you need a key for validation, use the same key at the receiver side
+char key = 'S';
+
+
+// create Shared memory with IPC_CREAT
+int shmid = shmget( key, 21, IPC_CREAT | 0666 );
+
+// attach the shared memory
+//char* ptr = shmat( shmid, NULL, 0 );
+int* ptr = shmat( shmid, NULL, 0 );
+
+// send and receive the data
+//strcpy( ptr, "Sidsy" );
+*ptr = 69;
+
+
+// detach 
+shmdt(ptr);
+
+
+
+
+
+
+
+
+//-----	RECEIVER FILE	-----
+// you need a key for validation, use the same key at the receiver side
+char key = 'S';
+
+
+// Get shmid with the same key, no need to create it, it's already been created in the sender program
+int shmid = shmget( key, 21, 0666 );
+
+// attach the shared memory
+//char* ptr = shmat( shmid, NULL, 0 );
+int* ptr = shmat( shmid, NULL, 0 );
+
+// send and receive the data
+//printf("Printing from shared memory: %s\n", ptr);
+printf("Printing from shared memory: %d\n", *ptr);
+
+// detach 
+shmdt(ptr);
+
+
+
+SIGNALS
+
